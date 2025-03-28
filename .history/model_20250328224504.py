@@ -43,14 +43,23 @@ class LLM_Model():
                     #pass
             message.append(aimsg)
             if aimsg.tool_calls:
-                Is_chat_finished=False
-                message.append(self.function_call(aimsg))            
+                self.function_call(aimsg,message)
+                # for tool_calls in aimsg.tool_calls:
+                # ###############Use tools#############
+                #     Is_chat_finished=False
+                #     #print("test",tool_calls["name"])
+                #     selected_tool = self.tools_dict[tool_calls["name"].lower()]
+                #     tool_output = selected_tool.invoke(tool_calls["args"])
+                #     message.append(ToolMessage(tool_output, tool_call_id=tool_calls["id"]))
+                # #####################################
+            
             aimsg=None       
             if Is_chat_finished:
                 break
-    def function_call(self,aimsg):
+    def function_call(self,aimsg,msg_sum):
         for tool_calls in aimsg.tool_calls:
             ###############Use tools#############
+                Is_chat_finished=False
                 #print("test",tool_calls["name"])
                 selected_tool = self.tools_dict[tool_calls["name"].lower()]
                 tool_output = selected_tool.invoke(tool_calls["args"])

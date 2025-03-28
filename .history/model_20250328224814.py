@@ -44,7 +44,8 @@ class LLM_Model():
             message.append(aimsg)
             if aimsg.tool_calls:
                 Is_chat_finished=False
-                message.append(self.function_call(aimsg))            
+                message.append(self.function_call(aimsg))
+            
             aimsg=None       
             if Is_chat_finished:
                 break
