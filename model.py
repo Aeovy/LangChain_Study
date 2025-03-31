@@ -15,6 +15,10 @@ class LLM_Model():
             self.__api_key = os.getenv("OLLAMA_API_KEY")
             self.model_name = os.getenv("OLLAMA_MODEL")
             self.base_url = os.getenv("OLLAMA_BASE_URL")
+        elif model_type.lower()=="lmstudio":
+            self.__api_key = os.getenv("LMSTUDIO_API_KEY")
+            self.model_name = os.getenv("LMSTUDIO_MODEL")
+            self.base_url = os.getenv("LMSTUDIO_BASE_URL")
         self.LLM=ChatOpenAI(
             model_name=self.model_name,
             api_key=self.__api_key,
@@ -69,7 +73,7 @@ class LLM_Model():
                 break
             print("all message:",message)
     def function_call(self,aimsg):
-        for tool_calls in aimsg.tool_calls:
+        for tool_calls in aimsg.tool_calls:   
             ###############Use tools#############
                 #print("test",tool_calls["name"])
                 selected_tool = self.tools_dict[tool_calls["name"].lower()]
@@ -90,24 +94,24 @@ class LLM_Model_async(LLM_Model):
             message=qurey
         chunks=None
         async for chunk in self.LLM.astream(message):
-            #print("chunk:",chunk)
+            # print("chunk:",chunk)
             if chunks is None:
                 chunks=chunk
             else:
                 chunks=chunks+chunk
             # 正常传输内容时，直接输出LLM的content###############
             if chunk.content!="":
-                print(chunk.content,end="")
+                print(chunk.content,end="",flush=True)
                 pass
             ###################################################
-        
+        #print(chunks)
         if chunks.response_metadata.get("finish_reason","")!="":
             message.append(chunks)
-            #print("temp_msg:",message)
-            if chunks.response_metadata["finish_reason"]=="stop":
+            Have_toolcalls=len(chunks.tool_calls)>0
+            if chunks.response_metadata["finish_reason"]=="stop" and Have_toolcalls==False:
                 #save memory
                 pass
-            elif chunks.response_metadata["finish_reason"]=="tool_calls":
+            elif chunks.response_metadata["finish_reason"]=="tool_calls" or Have_toolcalls==True:
                 function_call_result=self.function_call(chunks)
                 message.append(function_call_result)
                 task=asyncio.create_task(self.chat_async(message))
@@ -115,9 +119,7 @@ class LLM_Model_async(LLM_Model):
             else:
                 pass
         ##memory管理
-        #print("test",AI_MSGS_content)
-        #print(chunks)
-        #print(message)
+
             
         
             
@@ -125,7 +127,7 @@ class LLM_Model_async(LLM_Model):
 from langchain_tools import tools, tools_dict
 async def main():
     test_model=LLM_Model_async(model_type="openai",temperature=0.6,tools=tools,tools_dict=tools_dict)
-    qurey="现在几点了"
+    qurey="使用工具计算一下123+456的结果,并告诉我现在的时间"
     task1=asyncio.create_task(test_model.chat_async(qurey))
     await task1
 if __name__ == "__main__":
