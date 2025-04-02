@@ -3,9 +3,9 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import ToolMessage,HumanMessage,AIMessage
 from langchain_tools import add,multiply,get_time,tools,tools_dict
 from dotenv import load_dotenv
-from langchain.memory import ConversationBufferMemory
+from langchain_community.chat_message_histories import ChatMessageHistory
 class LLM_Model():
-    def __init__(self, model_type: str="ollama",temperature: float=0.9,tools: list=None,tools_dict: dict=None,maxtoken=8192):
+    def __init__(self, model_type: str="ollama",temperature: float=0.9,tools: list=None,tools_dict: dict=None,maxtoken=2048):
         load_dotenv()
         if model_type.lower()=="openai":
             self.__api_key = os.getenv("OPENAI_API_KEY")
@@ -29,12 +29,16 @@ class LLM_Model():
         )
         
         self.bindtools(tools, tools_dict)
-            
-        # self.memory=ConversationBufferMemory(
+        
+         ####加入对话记忆####
+        self.Chat_Memory=ChatMessageHistory()
 
-        # )
-        ####未来加入读取历史消息的功能####
-        #self.history_message = self.read_history_message()
+    def load_memory():
+        #load Json
+        pass
+    def reduce_memory_used_space(Memory:ChatMessageHistory):
+        # 用LLM总结聊天上下文
+        pass
     def bindtools(self,tools: list, tools_dict: dict):
         if tools!=None and tools_dict!=None:
             self.tools=tools
@@ -73,13 +77,19 @@ class LLM_Model():
                 break
             print("all message:",message)
     def function_call(self,aimsg):
-        for tool_calls in aimsg.tool_calls:   
-            ###############Use tools#############
-                #print("test",tool_calls["name"])
-                selected_tool = self.tools_dict[tool_calls["name"].lower()]
-                tool_output =tool_calls["name"].lower()+" result:"+ str(selected_tool.invoke(tool_calls["args"]))
-                return ToolMessage(tool_output, tool_call_id=tool_calls["id"])
-            #####################################
+        result=[]
+        for tool_calls in aimsg.tool_calls:
+                try:   
+                ###############Use tools#############
+                    #print("test",tool_calls["name"])
+                    selected_tool = self.tools_dict[tool_calls["name"].lower()]
+                    #tool_output =tool_calls["name"].lower()+" result:"+ str(selected_tool.invoke(tool_calls["args"]))
+                    tool_output = selected_tool.invoke(tool_calls)
+                    result.append(tool_output) 
+                #####################################
+                except Exception as e:
+                    result.append(ToolMessage(e))
+        return result
 
 import asyncio
 #tesst
@@ -89,36 +99,44 @@ class LLM_Model_async(LLM_Model):
 
     async def chat_async(self, qurey):####message预定为当前对话上下文
         if type(qurey)==str:
+            self.Chat_Memory.add_user_message(qurey)
             message=[HumanMessage(qurey)]
-        else:
+        else:#当使用function call后，会递归该函数，此时input的qurey的type为list
             message=qurey
         chunks=None
         async for chunk in self.LLM.astream(message):
-            # print("chunk:",chunk)
+            #print("chunk:",chunk)
             if chunks is None:
                 chunks=chunk
             else:
                 chunks=chunks+chunk
             # 正常传输内容时，直接输出LLM的content###############
             if chunk.content!="":
-                print(chunk.content,end="",flush=True)
+                #print(chunk.content,end="",flush=True)
                 pass
             ###################################################
-        #print(chunks)
+        #print("chunks",chunks)
         if chunks.response_metadata.get("finish_reason","")!="":
             message.append(chunks)
+            print("Chunks:",chunks)
+            print("message:",message)
             Have_toolcalls=len(chunks.tool_calls)>0
             if chunks.response_metadata["finish_reason"]=="stop" and Have_toolcalls==False:
                 #save memory
+                
                 pass
-            elif chunks.response_metadata["finish_reason"]=="tool_calls" or Have_toolcalls==True:
+            # 有的模型调用function call时，stop reason不一定为"tool_calls"
+            elif chunks.response_metadata["finish_reason"]=="tool_calls" or Have_toolcalls==True: 
+                
                 function_call_result=self.function_call(chunks)
-                message.append(function_call_result)
+                for function_msg in function_call_result:
+                    message.append(function_msg)
                 task=asyncio.create_task(self.chat_async(message))
                 await task 
             else:
+                #print("debug_status:",chunks)
                 pass
-        ##memory管理
+       
 
             
         
@@ -127,7 +145,8 @@ class LLM_Model_async(LLM_Model):
 from langchain_tools import tools, tools_dict
 async def main():
     test_model=LLM_Model_async(model_type="openai",temperature=0.6,tools=tools,tools_dict=tools_dict)
-    qurey="使用工具计算一下123+456的结果,并告诉我现在的时间"
+    qurey="计算123+456和123X456的结果"
+
     task1=asyncio.create_task(test_model.chat_async(qurey))
     await task1
 if __name__ == "__main__":

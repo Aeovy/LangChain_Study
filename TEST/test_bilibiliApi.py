@@ -1,50 +1,9 @@
-from langchain_core.tools import tool
-import time 
-import sys
-import inspect
-import ast
-import os
-from typing import Any
 import bilibili_api
 from bilibili_api import sync
 from bilibili_api.search import SearchObjectType
 import Functions.Functions as Functions
-@tool
-def add(a: int, b: int) -> int:
-    """Adds a and b."""
-    return a + b
 
-@tool
-def multiply(a: int, b: int) -> int:
-    """Multiplies a and b."""
-    return a * b
 
-@tool
-def get_time(format_type: str = "default") -> str:
-    """获取用户当前本地时间。
-    
-    参数:
-        format_type: 时间格式选项
-            - "default": 默认格式 (YYYY-MM-DD HH:MM:SS)
-            - "date": 只返回日期 (YYYY-MM-DD)
-            - "time": 只返回时间 (HH:MM:SS)
-            - "full": 包含星期和毫秒的完整格式
-    """
-    now = time.time()
-    local_time = time.localtime(now)
-    
-    if format_type.lower() == "date":
-        return time.strftime("%Y-%m-%d", local_time)
-    elif format_type.lower() == "time":
-        return time.strftime("%H:%M:%S", local_time)
-    elif format_type.lower() == "full":
-        weekday = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"][local_time.tm_wday]
-        ms = int((now - int(now)) * 1000)
-        basic = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
-        return f"{basic}.{ms:03d} {weekday}"
-    else:  # default
-        return time.strftime("%Y-%m-%d %H:%M:%S", local_time)
-@tool
 def search_bilibili(keyword: str,content_type:str,content_categories:str=None,time_start:str=None,time_end:str=None) :#-> dict[Any, Any]:
     """
     当用户需要在Bilibili(B站，哔哩哔哩)上搜索时，可以使用此工具。
@@ -80,7 +39,6 @@ def search_bilibili(keyword: str,content_type:str,content_categories:str=None,ti
     #验证时间合法性
     time_start=Functions.validate_date_format(time_start)
     time_end=Functions.validate_date_format(time_end)
-    
     try:
         API_result=sync(bilibili_api.search.search_by_type(keyword=keyword,search_type=content_type,
                                                     video_zone_type=content_categories_id,
@@ -104,32 +62,6 @@ def search_bilibili(keyword: str,content_type:str,content_categories:str=None,ti
         return e
 
 
-
-def parse_tools_from_source(module):
-    source = inspect.getsource(module)
-    tree = ast.parse(source)
-    tools = []
-    tools_dict = {}
-    for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef):
-            for decorator in node.decorator_list:
-                decorator_name = None
-                if isinstance(decorator, ast.Name):
-                    decorator_name = decorator.id
-                elif isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Name):
-                    decorator_name = decorator.func.id
-                if decorator_name == "tool":
-                    func_name = node.name
-                    func = getattr(module, func_name)
-                    tools.append(func)
-                    tools_dict[func_name] = func
-    return tools, tools_dict
-
-
-
-current_module = sys.modules[__name__]
-tools, tools_dict = parse_tools_from_source(current_module)
-
-
-
-
+if __name__ == "__main__":
+    temp=search_bilibili("python","视频","科技数码")
+    print(temp)
