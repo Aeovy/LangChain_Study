@@ -21,8 +21,9 @@ def multiply(a: int, b: int) -> int:
 
 @tool
 def get_time(format_type: str = "default") -> str:
-    """获取当前用户的系统时间，支持多种格式输出。
-    
+    """
+    当用户所问的问题涉及时间时，请使用此工具。
+    获取当前用户的系统时间，支持多种格式输出。
     参数:
         format_type: 输出格式选项
             - "default": 标准格式 (YYYY-MM-DD HH:MM:SS)

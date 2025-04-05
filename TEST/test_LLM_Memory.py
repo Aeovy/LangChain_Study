@@ -29,17 +29,21 @@ async def load_memory_async(conversion_id)-> SQLChatMessageHistory:
     session_id=conversion_id, connection=async_engine,
     )
     return async_message_history
-async def main(conversion_id):
-    # 使用异步加载记忆对象
-    memory_history = await load_memory_async(conversion_id=conversion_id)
-    # 使用异步方法获取消息列表
-    messages = await memory_history.aget_messages()
-    print("Retrieved messages:", messages)
-    #print("Memory history:", memory_history)
+test=get_session_history("1")
+print(test)
+#print(test.messages)
+# async def main(conversion_id):
+#     # 使用异步加载记忆对象
+#     memory_history = await load_memory_async(conversion_id=conversion_id)
+#     #print("Memory history:", memory_history)
+#     # 使用异步方法获取消息列表
+#     messages = await memory_history.aget_messages()
+#     print("Retrieved messages:", messages)
+#     #print("Memory history:", memory_history)
 
 
 
-if __name__=="__main__":
-    conversion_id="1"
-    asyncio.run(main(conversion_id))
+# if __name__=="__main__":
+#     conversion_id="1"
+#     asyncio.run(main(conversion_id))
 
